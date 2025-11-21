@@ -117,39 +117,53 @@ class _AdminAnalysisState extends State<AdminAnalysis> {
         _complaints.where((m) => m["status"] == "in-progress").length;
     final open = _complaints.where((m) => m["status"] == "open").length;
 
-    Widget card(String label, String value, {Color? color}) => Expanded(
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(label, style: const TextStyle(color: Colors.grey)),
-                  const SizedBox(height: 6),
-                  Text(
-                    value,
-                    style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: color ?? Colors.black),
-                  )
-                ],
-              ),
+    Widget card(String label, String value, {Color? color}) => Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: const TextStyle(color: Colors.grey)),
+                const SizedBox(height: 6),
+                Text(
+                  value,
+                  style: TextStyle(
+                      fontSize: 20, fontWeight: FontWeight.bold, color: color ?? Colors.black),
+                )
+              ],
             ),
           ),
         );
 
-    return Row(
-      children: [
-        card("Total", "$total"),
-        const SizedBox(width: 8),
-        card("Resolved", "$resolved", color: Colors.green),
-        const SizedBox(width: 8),
-        card("In-Progress", "$inProgress", color: Colors.orange),
-        const SizedBox(width: 8),
-        card("Open", "$open", color: Colors.red),
-      ],
-    );
+    return LayoutBuilder(builder: (context, constraints) {
+      final width = constraints.maxWidth;
+      if (width < 520) {
+        // show two cards per row on narrow screens
+        final cardWidth = (width - 8) / 2;
+        return Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            SizedBox(width: cardWidth, child: card("Total", "$total")),
+            SizedBox(width: cardWidth, child: card("Resolved", "$resolved", color: Colors.green)),
+            SizedBox(width: cardWidth, child: card("In-Progress", "$inProgress", color: Colors.orange)),
+            SizedBox(width: cardWidth, child: card("Open", "$open", color: Colors.red)),
+          ],
+        );
+      }
+
+      return Row(
+        children: [
+          Expanded(child: card("Total", "$total")),
+          const SizedBox(width: 8),
+          Expanded(child: card("Resolved", "$resolved", color: Colors.green)),
+          const SizedBox(width: 8),
+          Expanded(child: card("In-Progress", "$inProgress", color: Colors.orange)),
+          const SizedBox(width: 8),
+          Expanded(child: card("Open", "$open", color: Colors.red)),
+        ],
+      );
+    });
   }
 
   // ------------------------ DEPARTMENT BAR CHART ------------------------

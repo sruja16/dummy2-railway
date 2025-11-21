@@ -54,10 +54,20 @@ class _AdminProfileState extends State<AdminProfile> {
   Future<void> _loadAdmin() async {
     final prefs = await SharedPreferences.getInstance();
     final c = prefs.getString("current_user") ?? "Admin";
-    setState(() {
-      _adminName = c;
-      _adminEmail = "$c@railway.gov";
-    });
+    // If the stored value looks like an email, use it as email and derive a display name
+    if (c.contains('@')) {
+      final parts = c.split('@');
+      final displayName = parts.isNotEmpty ? parts[0] : c;
+      setState(() {
+        _adminName = displayName;
+        _adminEmail = c;
+      });
+    } else {
+      setState(() {
+        _adminName = c;
+        _adminEmail = "$c@railway.gov";
+      });
+    }
   }
 
   Future<void> _loadComplaintStats() async {
@@ -153,38 +163,89 @@ class _AdminProfileState extends State<AdminProfile> {
 
   Widget _profileCard() {
     return Card(
-      elevation: 6,
+      color: Colors.grey.shade50,
+      elevation: 8,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(18.0),
-        child: Row(
-          children: [
-            CircleAvatar(radius: 34, backgroundColor: RailColors.blue, child: const Icon(Icons.admin_panel_settings, size: 40, color: Colors.white)),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(_adminName, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                Text(_adminEmail, style: const TextStyle(color: Colors.black54, fontSize: 14))
-              ]),
-            )
-          ],
-        ),
+        child: LayoutBuilder(builder: (context, constraints) {
+          final narrow = constraints.maxWidth < 360;
+
+          if (narrow) {
+            // Constrain card width to make it look like the screenshot
+            return Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: 360),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 88,
+                      height: 88,
+                      decoration: BoxDecoration(
+                        color: RailColors.blue,
+                        shape: BoxShape.circle,
+                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 8, offset: const Offset(0, 4))],
+                      ),
+                      child: const Center(child: Icon(Icons.admin_panel_settings, size: 40, color: Colors.white)),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(_adminName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 6),
+                    Text(_adminEmail, style: TextStyle(color: Colors.black54.withOpacity(0.9), fontSize: 12)),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          return Row(
+            children: [
+              CircleAvatar(radius: 34, backgroundColor: RailColors.blue, child: const Icon(Icons.admin_panel_settings, size: 40, color: Colors.white)),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(_adminName, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  Text(_adminEmail, style: const TextStyle(color: Colors.black54, fontSize: 14))
+                ]),
+              )
+            ],
+          );
+        }),
       ),
     );
   }
 
   Widget _kpiCards() {
-    return Row(
-      children: [
-        Expanded(child: _kpi("Total", _total, RailColors.blue)),
-        const SizedBox(width: 10),
-        Expanded(child: _kpi("Open", _open, RailColors.danger)),
-        const SizedBox(width: 10),
-        Expanded(child: _kpi("In Progress", _inProgress, RailColors.warning)),
-        const SizedBox(width: 10),
-        Expanded(child: _kpi("Resolved", _resolved, RailColors.success)),
-      ],
-    );
+    return LayoutBuilder(builder: (context, constraints) {
+      final width = constraints.maxWidth;
+      // On narrow screens, stack as two columns
+      if (width < 520) {
+        return Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            SizedBox(width: (width - 10) / 2, child: _kpi("Total", _total, RailColors.blue)),
+            SizedBox(width: (width - 10) / 2, child: _kpi("Open", _open, RailColors.danger)),
+            SizedBox(width: (width - 10) / 2, child: _kpi("In Progress", _inProgress, RailColors.warning)),
+            SizedBox(width: (width - 10) / 2, child: _kpi("Resolved", _resolved, RailColors.success)),
+          ],
+        );
+      }
+
+      // Wider screens: single row
+      return Row(
+        children: [
+          Expanded(child: _kpi("Total", _total, RailColors.blue)),
+          const SizedBox(width: 10),
+          Expanded(child: _kpi("Open", _open, RailColors.danger)),
+          const SizedBox(width: 10),
+          Expanded(child: _kpi("In Progress", _inProgress, RailColors.warning)),
+          const SizedBox(width: 10),
+          Expanded(child: _kpi("Resolved", _resolved, RailColors.success)),
+        ],
+      );
+    });
   }
 
   Widget _kpi(String title, int value, Color color) {
@@ -208,10 +269,13 @@ class _AdminProfileState extends State<AdminProfile> {
   Widget _statusDonut() {
     final Map<String, double> values = {"Open": _open.toDouble(), "In-Progress": _inProgress.toDouble(), "Resolved": _resolved.toDouble()};
     final colors = [RailColors.danger, RailColors.warning, RailColors.success];
-
-    return Center(
-      child: SizedBox(width: 220, height: 220, child: CustomPaint(painter: _DonutPainter(values: values, colors: colors))),
-    );
+    return LayoutBuilder(builder: (context, constraints) {
+      final available = constraints.maxWidth;
+      final size = math.min(220.0, available * 0.8);
+      return Center(
+        child: SizedBox(width: size, height: size, child: CustomPaint(painter: _DonutPainter(values: values, colors: colors))),
+      );
+    });
   }
 
   Future<void> _exportCsv() async {

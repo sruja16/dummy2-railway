@@ -6,7 +6,6 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 // Auth Gate
 import 'auth_gate.dart';
@@ -16,7 +15,8 @@ import 'services/api_service.dart';
 import 'providers/theme_provider.dart';
 
 // Screens
-import 'screens/splash_screen.dart';
+//    // original splash (corrupted) left in tree
+import 'screens/app_splash_screen.dart';   // clean splash used as app entry
 import 'screens/user_dashboard.dart';
 import 'screens/chatbot_placeholder.dart';
 import 'screens/complaint/new_complaint.dart';
@@ -24,10 +24,9 @@ import 'screens/complaint/track_complaint.dart';
 import 'screens/staff/staff_dashboard.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
-import 'screens/auth/forgot_password.dart';  // ← Added
+import 'screens/auth/forgot_password.dart';
 import 'screens/admin/admin_dashboard.dart';
 import 'screens/settings/settings_screen.dart';
-
 
 /// Background notifications — only for Android/iOS (NOT WEB)
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -84,13 +83,14 @@ class MyApp extends StatelessWidget {
 
             themeMode: theme.mode,
 
-            home: const AuthGate(),
+            // ✅ START APP WITH CLEAN SPLASH
+            home: const AppSplashScreen(),
 
             routes: {
-              '/splash': (context) => const SplashScreen(),
+              '/splash': (context) => const AppSplashScreen(),
               '/login': (context) => const LoginScreen(),
               '/register': (context) => const RegisterScreen(),
-              '/forgot': (context) => const ForgotPasswordScreen(), // ✔ Added
+              '/forgot': (context) => const ForgotPasswordScreen(),
               '/user': (context) => const UserDashboard(),
               '/complaint/new': (context) => const NewComplaintScreen(),
               '/complaint/track': (context) => const TrackComplaintScreen(),

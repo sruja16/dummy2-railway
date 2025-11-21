@@ -1,3 +1,4 @@
+// lib/screens/auth/login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,12 +16,16 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
   bool _loading = false;
 
+  bool _obscure = true;
+  bool _rememberMe = false;
+
   late AnimationController _controller;
   late Animation<double> _trainSlide;
 
   @override
   void initState() {
     super.initState();
+    _loadSavedLogin();
 
     _controller = AnimationController(
       vsync: this,
@@ -29,6 +34,51 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
     _trainSlide = Tween<double>(begin: -0.6, end: 1.4)
         .animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+  }
+
+  Future<void> _loadSavedLogin() async {
+    final prefs = await SharedPreferences.getInstance();
+    final email = prefs.getString("saved_email");
+    final pass = prefs.getString("saved_pass");
+
+    if (email != null && pass != null) {
+      setState(() {
+        _emailCtrl.text = email;
+        _passCtrl.text = pass;
+        _rememberMe = true;
+      });
+    }
+  }
+
+  Future<void> _saveRememberMe() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    if (_rememberMe) {
+      prefs.setString("saved_email", _emailCtrl.text.trim());
+      prefs.setString("saved_pass", _passCtrl.text.trim());
+    } else {
+      prefs.remove("saved_email");
+      prefs.remove("saved_pass");
+    }
+  }
+
+  Future<void> _forgotPassword() async {
+    if (_emailCtrl.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Enter email to reset password")),
+      );
+      return;
+    }
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: _emailCtrl.text.trim());
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Reset email sent")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+    }
   }
 
   @override
@@ -57,6 +107,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString("current_user", cred.user!.email!);
+
+      await _saveRememberMe();
 
       Navigator.pushReplacementNamed(context, "/");
     } on FirebaseAuthException catch (e) {
@@ -87,7 +139,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   translation: Offset(_trainSlide.value, 0),
                   child: child,
                 ),
-                child: const Icon(Icons.train, size: 90, color: Colors.blue),
+                child: const Hero(
+                  tag: "trainHero",
+                  child: Icon(Icons.train, size: 90, color: Colors.blue),
+                ),
               ),
             ),
 
@@ -123,11 +178,39 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
                     TextField(
                       controller: _passCtrl,
-                      obscureText: true,
-                      decoration: _input("Password"),
+                      obscureText: _obscure,
+                      decoration: _input("Password").copyWith(
+                        suffixIcon: IconButton(
+                          icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility),
+                          onPressed: () {
+                            setState(() => _obscure = !_obscure);
+                          },
+                        ),
+                      ),
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 8),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Checkbox(
+                              value: _rememberMe,
+                              onChanged: (v) => setState(() => _rememberMe = v ?? false),
+                            ),
+                            const Text("Remember Me"),
+                          ],
+                        ),
+                        TextButton(
+                          onPressed: _forgotPassword,
+                          child: const Text("Forgot Password?"),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 10),
 
                     SizedBox(
                       width: double.infinity,
